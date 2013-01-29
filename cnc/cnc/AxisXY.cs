@@ -5,15 +5,26 @@ namespace cnc
 	public class AxisXY
 	{
 		float feedRate;
-		Axis axisX, axisY;
+		public Axis axisX, axisY;
 		string distanceMode;
+		public event CNCEventHandler makeStep;
+        DateTime time;
 
 		public AxisXY (string distanceMode, string unit, int axisXStepsPercm, int axisYStepsPercm)
 		{
             this.distanceMode = distanceMode;
-			axisX = new Axis(axisXStepsPercm, new byte[]{0,1,2,3},252, unit);
-			axisY = new Axis(axisYStepsPercm, new byte[]{0,4,8,12},243, unit);
+			axisX = new Axis(axisXStepsPercm, new byte[]{0,1,2,3},252, unit,"x");
+			axisY = new Axis(axisYStepsPercm, new byte[]{0,4,8,12},243, unit,"y");
+            Console.WriteLine("LLega hasta aca");
+            axisX.makeStep += new CNCEventHandler(HandlemakeStep);
+            axisY.makeStep += new CNCEventHandler(HandlemakeStep);
+            Console.WriteLine("LLega hasta aca");
+		}
 
+		void HandlemakeStep (object sender, CNCEventArgs e)
+		{
+			Console.WriteLine("XY noto step");
+			makeStep(sender,e);
 		}
 
 		public void Move (float x, float y, float f)
@@ -50,33 +61,45 @@ namespace cnc
 				axisY.setStepsToDo (y);
 			}
 
-			float timeToDoThis = diagonal * 60 / feedRate;
+			float timeToDoThis = diagonal * 60000 / feedRate;
 
-			axisX.setTimePerStep(timeToDoThis);
-			axisY.setTimePerStep(timeToDoThis);
+            Console.WriteLine("Tiempo para hacerlo:"+timeToDoThis);
 
-			axisX.setTimeNextStep();
-			axisY.setTimeNextStep();
+            time = DateTime.Now;
 
+            if (axisX.stepsToDo != 0)
+            {
+                axisX.setTimePerStep(timeToDoThis);
+                axisX.setTimeNextStep(time);
+            }
+            if (axisY.stepsToDo != 0)
+            {
+                axisY.setTimePerStep(timeToDoThis);
+                axisY.setTimeNextStep(time);
+            }
+			
 			while (axisY.stepsToDo != 0 || axisX.stepsToDo != 0) 
 			{
-				if(DateTime.Now >= axisX.timeNextStep)
+				if(time >= axisX.timeNextStep && axisX.stepsToDo != 0)
 				{
                     Console.WriteLine("Ejex");
                     Main.data &= axisX.mask;
                     Main.data |= axisX.getNextStep();
-                    axisX.setTimeNextStep();
+                    axisX.setTimeNextStep(axisX.timeNextStep);
                     Main.Refresh();
 				}
 
-                if (DateTime.Now >= axisY.timeNextStep)
+                if (time >= axisY.timeNextStep && axisY.stepsToDo != 0)
 				{
                     Console.WriteLine("Ejey");
                     Main.data &= axisY.mask;
                     Main.data |= axisY.getNextStep();
-                    axisY.setTimeNextStep();
+                    axisY.setTimeNextStep(axisY.timeNextStep);
                     Main.Refresh();
 				}
+
+                time = DateTime.Now;
+
 			}
 		}
 

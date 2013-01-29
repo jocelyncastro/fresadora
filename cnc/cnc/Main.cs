@@ -4,10 +4,25 @@ using System.IO.Ports;
 
 namespace cnc
 {
+
+	public delegate void CNCEventHandler(object sender, CNCEventArgs e);
+
+	public class CNCEventArgs : EventArgs
+	{
+		public bool avanzar;
+        public string axis;
+		public CNCEventArgs (bool avanzar, string axis)
+		{
+			this.avanzar = avanzar;
+            this.axis = axis;
+		}
+
+	}
+
 	public class Main
 	{
-        AxisXY axisXY;
-        AxisZ axisZ;
+        public AxisXY axisXY;
+        public AxisZ axisZ;
         public string unit;
         public string distanceMode;
         MethodInfo[] metodos;
@@ -17,7 +32,9 @@ namespace cnc
         bool alredySetup;
         int xyMaxFeedRate, zMaxFeedRate;
         int axisXStepsPercm, axisYStepsPercm, axisZStepsPercm;
-		
+
+		public event CNCEventHandler makeStep;
+
         public Main (string portName, int baudRate, int axisXStepsPercm, int axisYStepsPercm, int axisZStepsPercm, int xyMaxFeedRate, int zMaxFeedRate)
 		{
             Type miTipo = typeof(Main);
@@ -32,6 +49,12 @@ namespace cnc
             this.axisYStepsPercm = axisYStepsPercm;
             this.axisZStepsPercm = axisZStepsPercm;
 		}
+
+        void HandlemakeStep (object sender, CNCEventArgs e)
+        {
+			Console.WriteLine("main noto step");
+			makeStep(sender,e);
+        }
 
         public static void Refresh()
         {
@@ -91,6 +114,8 @@ namespace cnc
             alredySetup = true;
             axisXY = new AxisXY(distanceMode, unit, axisXStepsPercm, axisYStepsPercm);
             axisZ = new AxisZ(distanceMode, unit, axisZStepsPercm);
+            axisXY.makeStep += new CNCEventHandler(HandlemakeStep);
+            axisZ.makeStep += new CNCEventHandler(HandlemakeStep);
         }
 
 		public void G21()

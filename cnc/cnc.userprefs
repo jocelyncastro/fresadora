@@ -1,10 +1,11 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="cnc/Axis.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="cnc/AxisZ.cs">
     <Files>
-      <File FileName="cnc/AxisZ.cs" Line="13" Column="1" />
-      <File FileName="cnc/Axis.cs" Line="14" Column="28" />
-      <File FileName="cnc/AxisXY.cs" Line="70" Column="6" />
+      <File FileName="cnc/AxisZ.cs" Line="15" Column="42" />
+      <File FileName="cnc/Axis.cs" Line="66" Column="42" />
+      <File FileName="cnc/AxisXY.cs" Line="17" Column="36" />
+      <File FileName="cnc/Main.cs" Line="51" Column="36" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

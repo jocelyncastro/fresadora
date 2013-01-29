@@ -26,6 +26,12 @@ namespace ConsoleCNC
                 Settings.Default.zMasFeedRate
                 );
             index = 0;
+			fresadora.makeStep += HandlemakeStep;
+        }
+
+        void HandlemakeStep (object sender, CNCEventArgs e)
+        {
+			Console.WriteLine("Se hizo un paso");
         }
 
         static void Main(string[] args)
