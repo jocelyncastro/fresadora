@@ -18,6 +18,15 @@ namespace cnc
             this.maxFeedRate = maxFeedRate;
 		}
 
+        public float Tomm(float distance)
+        {
+            if (unit == "inches")
+            {
+                distance *= (float)25.4;
+            }
+            return distance;
+        }
+
         void stepsToDo(Axis axis, float position)
         {
             if (position > axis.actualPosition && position < 0)
@@ -67,6 +76,9 @@ namespace cnc
         {
             float timeToDoThis = 0;
             currentFeedRate = f;
+
+            z = Tomm(z);
+
             if (distanceMode == "absolute")
             {
                 stepsToDo(axisZ, z);

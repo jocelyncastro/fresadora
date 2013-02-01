@@ -28,7 +28,6 @@ namespace cnc
 
         static SerialPort port;
         public static byte data;
-        string unit, distanceMode;
 
         public Main (SerialPort port, AxisXY axisXY, AxisZ axisZ, Taladro taladro)
 		{

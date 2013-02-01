@@ -20,7 +20,6 @@ namespace cnc
             this.maxFeedRate = maxFeedRate;
 		}
 
-
         public void setDistanceMode(string distanceMode)
         {
             this.distanceMode = distanceMode;
@@ -56,9 +55,22 @@ namespace cnc
             Main.Refresh();
         }
 
+        public float Tomm(float distance)
+        {
+            if (unit == "inches")
+            {
+                distance *= (float)25.4;
+            }
+            return distance;
+        }
+
         public void Move(float x, float y, float f)
         {
             currentFeedRate = f;
+
+            x = Tomm(x);
+            y = Tomm(y);
+
             if (distanceMode == "absolute")
             {
                 diagonal = (float)Math.Sqrt(Math.Pow(axisX.actualPosition - x, 2) + Math.Pow(axisY.actualPosition - y, 2));

@@ -3,7 +3,7 @@ using System.IO.Ports;
 
 namespace cnc
 {
-    class Taladro
+    public class Taladro
     {
         byte mask;
 

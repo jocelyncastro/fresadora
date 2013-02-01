@@ -5,7 +5,7 @@ namespace cnc
 	public class Axis
 	{
 
-		int stepsByUnit;
+		int stepsBymm;
 		public float actualPosition;
 		byte[] steps;
 		public int stepsToDo;
@@ -18,7 +18,7 @@ namespace cnc
 
 		public event CNCEventHandler makeStep;
 
-		public Axis(int stepsBycm, byte[] steps, byte mask, string unit,string name)
+		public Axis(int stepsBycm, byte[] steps, byte mask, string name)
 		{
 			this.steps = steps;
             this.mask = mask;
@@ -26,22 +26,15 @@ namespace cnc
 			currentStep = 0;
             paso = (float) 10.0 / stepsBycm;
             this.name = name;
-
-            switch (unit)
-            { 
-                case "millimeters":
-                    stepsByUnit = stepsBycm / 10;
-                    break;
-                case "inches":
-                    stepsByUnit = (int)(stepsBycm * 2.54);
-                    break;
-            }
-
+            stepsBymm = stepsBycm / 10;
 		}
-
-		public void setStepsToDo(float dato)
+        /// <summary>
+        /// Set the cuantity of steps that the motor have to do
+        /// </summary>
+        /// <param name="distance">Distance in millimeters</param>
+		public void setStepsToDo(float distance)
 		{
-			stepsToDo = (int)(dato * stepsByUnit);
+			stepsToDo = (int)(distance * stepsBymm);
             Console.WriteLine("Steps to do:" + stepsToDo);
 		}
 
