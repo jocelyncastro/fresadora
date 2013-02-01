@@ -4,66 +4,92 @@ namespace cnc
 {
     public class AxisZ
     {
-        float feedRate;
+        float currentFeedRate, maxFeedRate;
         string distanceMode;
         public Axis axisZ;
 		public event CNCEventHandler makeStep;
         DateTime time;
-        public AxisZ(string distanceMode, string unit,int axisZStepsPercm)
+        float msecondsToDoThis;
+        string unit;
+
+        public AxisZ(Axis axisZ, float maxFeedRate)
         {
-            this.distanceMode = distanceMode;
-            axisZ = new Axis(axisZStepsPercm, new byte[] { 0, 16, 32, 48 }, 207, unit,"z");
-        	axisZ.makeStep += HandlemakeStep;
+            this.axisZ = axisZ;
+            this.maxFeedRate = maxFeedRate;
 		}
 
-        void HandlemakeStep (object sender, CNCEventArgs e)
+        void stepsToDo(Axis axis, float position)
         {
-			Console.WriteLine("z noto step");
-			makeStep(sender,e);
+            if (position > axis.actualPosition && position < 0)
+                axis.setStepsToDo((axis.actualPosition - position) * -1);
+            else
+                axis.setStepsToDo(position - axis.actualPosition);
+        }
+
+        void setTime(Axis axis)
+        {
+            if (axis.stepsToDo != 0)
+            {
+                axis.setTimePerStep(msecondsToDoThis);
+                axis.setTimeNextStep(time);
+            }
+        }
+
+        void doStep(Axis axis)
+        {
+            Main.data &= axis.mask;
+            Main.data |= axis.getNextStep();
+            axis.setTimeNextStep(axis.timeNextStep);
+            Main.Refresh();
+        }
+
+        public void FastMove(float z)
+        {
+            Move(z, maxFeedRate);
         }
 
         public void Move(float z)
         {
-            Move(z, feedRate);
+            Move(z, currentFeedRate);
+        }
+
+        public void setDistanceMode(string distanceMode)
+        {
+            this.distanceMode = distanceMode;
+        }
+
+        public void setUnit(string unit)
+        {
+            this.unit = unit;
         }
 
         public void Move(float z, float f)
         {
             float timeToDoThis = 0;
-            feedRate = f;
+            currentFeedRate = f;
             if (distanceMode == "absolute")
             {
-                axisZ.setStepsToDo(axisZ.actualPosition - z);
-                timeToDoThis = (axisZ.actualPosition - z) * 60000 / feedRate;
-                if (timeToDoThis < 0)
-                    timeToDoThis *= -1;
+                stepsToDo(axisZ, z);
+
+                msecondsToDoThis = (z - axisZ.actualPosition) * 60000 / currentFeedRate;
             }
             else if (distanceMode == "incremental")
             {
                 axisZ.setStepsToDo(z);
-                timeToDoThis = z * 60000 / feedRate;
-                if (timeToDoThis < 0)
-                    timeToDoThis *= -1;
+                msecondsToDoThis = z * 60000 / currentFeedRate;
             }
+
+            if (timeToDoThis < 0)
+                timeToDoThis *= -1;
 
             time = DateTime.Now;
 
-            if (axisZ.stepsToDo != 0)
-            {
-                axisZ.setTimePerStep(timeToDoThis);
-                axisZ.setTimeNextStep(time);
-            }
+            setTime(axisZ);
 
             while (axisZ.stepsToDo != 0)
             {
                 if (time >= axisZ.timeNextStep)
-                {
-                    Main.data &= axisZ.mask;
-                    Main.data |= axisZ.getNextStep();
-                    axisZ.setTimeNextStep(axisZ.timeNextStep);
-                    Main.Refresh();
-                }
-
+                    doStep(axisZ);
                 time = DateTime.Now;
 
             }

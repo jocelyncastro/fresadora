@@ -4,108 +4,105 @@ namespace cnc
 {
 	public class AxisXY
 	{
-		float feedRate;
+		float currentFeedRate;
+        float maxFeedRate;
 		public Axis axisX, axisY;
 		string distanceMode;
-		public event CNCEventHandler makeStep;
         DateTime time;
+        float diagonal;
+        float msecondsToDoThis;
+        string unit;
 
-		public AxisXY (string distanceMode, string unit, int axisXStepsPercm, int axisYStepsPercm)
+		public AxisXY (Axis axisX, Axis axisY, float maxFeedRate)
 		{
+            this.axisX = axisX;
+            this.axisY = axisY;
+            this.maxFeedRate = maxFeedRate;
+		}
+
+
+        public void setDistanceMode(string distanceMode)
+        {
             this.distanceMode = distanceMode;
-			axisX = new Axis(axisXStepsPercm, new byte[]{0,1,2,3},252, unit,"x");
-			axisY = new Axis(axisYStepsPercm, new byte[]{0,4,8,12},243, unit,"y");
-            Console.WriteLine("LLega hasta aca");
-            axisX.makeStep += new CNCEventHandler(HandlemakeStep);
-            axisY.makeStep += new CNCEventHandler(HandlemakeStep);
-            Console.WriteLine("LLega hasta aca");
-		}
+        }
 
-		void HandlemakeStep (object sender, CNCEventArgs e)
-		{
-			Console.WriteLine("XY noto step");
-			makeStep(sender,e);
-		}
+        public void setUnit(string unit)
+        {
+            this.unit = unit;
+        }
 
-		public void Move (float x, float y, float f)
-		{
-			float diagonal = 0;
-            feedRate = f;
-			if (distanceMode == "absolute") 
-			{
-				diagonal = (float)Math.Sqrt (Math.Pow (axisX.actualPosition - x, 2) + Math.Pow (axisY.actualPosition - y, 2));
+        void stepsToDo(Axis axis, float position)
+        {
+            if (position > axis.actualPosition && position < 0)
+                axis.setStepsToDo((axis.actualPosition - position) * -1);
+            else
+                axis.setStepsToDo(position - axis.actualPosition);
+        }
 
-                if(x > axisX.actualPosition && x > 0)
-                    axisX.setStepsToDo(x - axisX.actualPosition);
-                else if (x < axisX.actualPosition && x > 0)
-                    axisX.setStepsToDo(x - axisX.actualPosition);
-                else if(x > axisX.actualPosition && x < 0)
-                    axisX.setStepsToDo((axisX.actualPosition - x)*-1);
-                else if(x < axisX.actualPosition && x < 0)
-                    axisX.setStepsToDo(x - axisX.actualPosition);
+        void setTime(Axis axis)
+        {
+            if (axis.stepsToDo != 0)
+            {
+                axis.setTimePerStep(msecondsToDoThis);
+                axis.setTimeNextStep(time);
+            }
+        }
 
-                if (y > axisY.actualPosition && y > 0)
-                    axisY.setStepsToDo(y - axisY.actualPosition);
-                else if (y < axisY.actualPosition && y > 0)
-                    axisY.setStepsToDo(y - axisY.actualPosition);
-                else if (y > axisY.actualPosition && y < 0)
-                    axisY.setStepsToDo((axisY.actualPosition - y) * -1);
-                else if (y < axisY.actualPosition && y < 0)
-                    axisY.setStepsToDo(y - axisY.actualPosition);
+        void doStep(Axis axis)
+        {
+            Main.data &= axis.mask;
+            Main.data |= axis.getNextStep();
+            axis.setTimeNextStep(axis.timeNextStep);
+            Main.Refresh();
+        }
 
-			} 
-			else if (distanceMode == "incremental") 
-			{
-				diagonal = (float)Math.Sqrt (Math.Pow (x, 2) + Math.Pow (y, 2));
-				axisX.setStepsToDo (x);
-				axisY.setStepsToDo (y);
-			}
+        public void Move(float x, float y, float f)
+        {
+            currentFeedRate = f;
+            if (distanceMode == "absolute")
+            {
+                diagonal = (float)Math.Sqrt(Math.Pow(axisX.actualPosition - x, 2) + Math.Pow(axisY.actualPosition - y, 2));
 
-			float timeToDoThis = diagonal * 60000 / feedRate;
+                stepsToDo(axisX, x);
+                stepsToDo(axisY, y);
 
-            Console.WriteLine("Tiempo para hacerlo:"+timeToDoThis);
+            }
+            else if (distanceMode == "incremental")
+            {
+                diagonal = (float)Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2));
+                axisX.setStepsToDo(x);
+                axisY.setStepsToDo(y);
+            }
+
+            msecondsToDoThis = diagonal * 60000 / currentFeedRate;
 
             time = DateTime.Now;
 
-            if (axisX.stepsToDo != 0)
+
+            setTime(axisX);
+            setTime(axisY);
+
+            while (axisY.stepsToDo != 0 || axisX.stepsToDo != 0)
             {
-                axisX.setTimePerStep(timeToDoThis);
-                axisX.setTimeNextStep(time);
-            }
-            if (axisY.stepsToDo != 0)
-            {
-                axisY.setTimePerStep(timeToDoThis);
-                axisY.setTimeNextStep(time);
-            }
-			
-			while (axisY.stepsToDo != 0 || axisX.stepsToDo != 0) 
-			{
-				if(time >= axisX.timeNextStep && axisX.stepsToDo != 0)
-				{
-                    Console.WriteLine("Ejex");
-                    Main.data &= axisX.mask;
-                    Main.data |= axisX.getNextStep();
-                    axisX.setTimeNextStep(axisX.timeNextStep);
-                    Main.Refresh();
-				}
+                if (time >= axisX.timeNextStep && axisX.stepsToDo != 0)
+                    doStep(axisX);
 
                 if (time >= axisY.timeNextStep && axisY.stepsToDo != 0)
-				{
-                    Console.WriteLine("Ejey");
-                    Main.data &= axisY.mask;
-                    Main.data |= axisY.getNextStep();
-                    axisY.setTimeNextStep(axisY.timeNextStep);
-                    Main.Refresh();
-				}
+                    doStep(axisY);
 
                 time = DateTime.Now;
 
-			}
-		}
+            }
+        }
+
+        public void FastMove(float x, float y)
+        {
+            Move(x,y,maxFeedRate);
+        }
 
 		public void Move(float x, float y)
 		{
-			Move (x,y,feedRate);
+			Move (x,y,currentFeedRate);
 		}
 
 	}

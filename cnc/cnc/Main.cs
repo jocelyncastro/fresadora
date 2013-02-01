@@ -21,53 +21,36 @@ namespace cnc
 
 	public class Main
 	{
-        public AxisXY axisXY;
-        public AxisZ axisZ;
-        public string unit;
-        public string distanceMode;
-        MethodInfo[] metodos;
+        AxisXY axisXY;
+        AxisZ axisZ;
         Taladro taladro;
-        public static SerialPort port;
+        MethodInfo[] metodos;
+
+        static SerialPort port;
         public static byte data;
-        bool alredySetup;
-        int xyMaxFeedRate, zMaxFeedRate;
-        int axisXStepsPercm, axisYStepsPercm, axisZStepsPercm;
+        string unit, distanceMode;
 
-		public event CNCEventHandler makeStep;
-
-        public Main (string portName, int baudRate, int axisXStepsPercm, int axisYStepsPercm, int axisZStepsPercm, int xyMaxFeedRate, int zMaxFeedRate)
+        public Main (SerialPort port, AxisXY axisXY, AxisZ axisZ, Taladro taladro)
 		{
             Type miTipo = typeof(Main);
-            port = new SerialPort(portName, baudRate);
-            Console.WriteLine(portName);
-            taladro = new Taladro();
+            Main.port = port;
             metodos = miTipo.GetMethods();
-            alredySetup = false;
-            this.xyMaxFeedRate = xyMaxFeedRate;
-            this.zMaxFeedRate = zMaxFeedRate;
-            this.axisXStepsPercm = axisXStepsPercm;
-            this.axisYStepsPercm = axisYStepsPercm;
-            this.axisZStepsPercm = axisZStepsPercm;
+            data = 0;
+            taladro = new Taladro();
+            this.axisXY = axisXY;
+            this.axisZ = axisZ;
+
 		}
 
-        void HandlemakeStep (object sender, CNCEventArgs e)
+        static public void Refresh()
         {
-			Console.WriteLine("main noto step");
-			makeStep(sender,e);
-        }
-
-        public static void Refresh()
-        {
-            Console.WriteLine("Enviando: "+data.ToString());
-            port.Write(new byte[]{data},0,1);
-                
+            port.Write(new byte[]{data},0,1);      
         }
 
         public void Handle(string comando)
         {
             string[] parametros;
             string[] comandos;
-            port.Open();
             try
             {
                 comando = comando.Trim();
@@ -105,38 +88,35 @@ namespace cnc
                 Console.WriteLine(e.ToString());
             }
 
-            port.Close();  
-
         }
 
-        void Setup()
+        public void setUnit(string unit)
         {
-            alredySetup = true;
-            axisXY = new AxisXY(distanceMode, unit, axisXStepsPercm, axisYStepsPercm);
-            axisZ = new AxisZ(distanceMode, unit, axisZStepsPercm);
-            axisXY.makeStep += new CNCEventHandler(HandlemakeStep);
-            axisZ.makeStep += new CNCEventHandler(HandlemakeStep);
+            axisXY.setUnit(unit);
+            axisZ.setUnit(unit);
+        }
+
+        public void setDistanceMode(string distanceMode)
+        {
+            axisXY.setDistanceMode(distanceMode);
+            axisZ.setDistanceMode(distanceMode);
         }
 
 		public void G21()
 		{
-			unit = "millimeters";
+           setUnit("millimeters");
 		}
         public void G20()
 		{
-            unit = "inches";
+            setUnit("inches");
 		}
         public void G90()
 		{
-            distanceMode = "absolute";
-            if (!alredySetup)
-                Setup();
+            setDistanceMode("absolute");
 		}
         public void G91()
 		{
-            distanceMode = "incremental";
-            if (!alredySetup)
-                Setup();
+            setDistanceMode("incremental");
 		}
 
         //funca
@@ -145,18 +125,14 @@ namespace cnc
             float x = float.Parse(xString.Remove(0, 1));
             float y = float.Parse(yString.Remove(0, 1));
 
-            Console.WriteLine("Float x: "+x);
-
-			axisXY.Move(x,y,xyMaxFeedRate);
+			axisXY.FastMove(x,y);
 		}
         //no funca
         public void G00(string zString)
 		{
             float z = float.Parse(zString.Remove(0, 1));
 
-            Console.WriteLine("Float z: " + z);
-
-            axisZ.Move(z,zMaxFeedRate);
+            axisZ.FastMove(z);
 		}
         public void M03()
 		{
@@ -222,9 +198,6 @@ namespace cnc
 		{
             
         }
-
-
-
 	}
 }
 
